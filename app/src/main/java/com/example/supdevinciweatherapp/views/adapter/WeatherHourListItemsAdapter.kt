@@ -33,7 +33,7 @@ class WeatherHourListItemsAdapter(private val arrayList: List<HourlyWeather>) : 
         val weatherIcon = view.findViewById<ImageView>(R.id.hourWeatherIcon)
 
         val timeParsed = SimpleDateFormat("yyyy-MM-dd h:mm a").parse(arrayList[position].time)
-        val dateParser = SimpleDateFormat("hh:mm")
+        val dateParser = SimpleDateFormat("hh:mm a")
         val netDate = Date(timeParsed.time)
         val beautyDate = dateParser.format(netDate)
         val iconName = WeatherCode().getWeatherImage(arrayList[position].weathercode)
