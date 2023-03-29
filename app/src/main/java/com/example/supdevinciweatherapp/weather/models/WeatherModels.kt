@@ -13,12 +13,13 @@ data class CurrentWeather(
     val temperature: Double,
     val weathercode: Int,
     val windspeed: Double,
-    val winddirection: Double
+    val winddirection: Double,
 )
 
 data class HourlyWeather(
     val time: List<String>,
     val windspeed_10m: List<Double>,
     val temperature_2m: List<Double>,
-    val relativehumidity_2m: List<Int>
+    val relativehumidity_2m: List<Int>,
+    val weathercode: List<Int>
 )

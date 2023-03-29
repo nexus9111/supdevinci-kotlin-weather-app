@@ -5,7 +5,7 @@ data class WeatherModels(
     val latitude: Double,
     val longitude: Double,
     val currentWeather: CurrentWeather,
-    val hourlyWeather: HourlyWeather,
+    val hourlyWeather: List<HourlyWeather>,
 )
 
 data class CurrentWeather(
@@ -13,12 +13,14 @@ data class CurrentWeather(
     val temperature: Double,
     val weathercode: Int,
     val windspeed: Double,
-    val winddirection: Double
+    val winddirection: Double,
 )
 
 data class HourlyWeather(
-    val time: List<String>,
-    val windspeed_10m: List<Double>,
-    val temperature_2m: List<Double>,
-    val relativehumidity_2m: List<Int>
+    val time: String,
+    val timeStamp: Long,
+    val windspeed_10m: Double,
+    val temperature_2m: Double,
+    val relativehumidity_2m: Int,
+    val weathercode: Int
 )

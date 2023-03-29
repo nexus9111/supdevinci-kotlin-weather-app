@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.example.supdevinciweatherapp.commonModels.WeatherModels
 import com.example.supdevinciweatherapp.databinding.ActivityMainBinding
 import com.example.supdevinciweatherapp.viewModels.CoordinateViewModel
+import com.example.supdevinciweatherapp.views.adapter.WeatherHourListItemsAdapter
 import com.example.supdevinciweatherapp.weather.entity.WeatherCityEntity
 import com.example.supdevinciweatherapp.weather.models.ApiResponse
 import com.example.supdevinciweatherapp.weather.repository.CityRoomDatabase
@@ -54,6 +55,12 @@ class MainActivity : AppCompatActivity() {
         // change image with currentWeatherBigIcon id
         val weatherImage = resources.getIdentifier(weatherImageName, "drawable", packageName)
         binding.currentWeatherBigIcon.setImageResource(weatherImage)
+        val currentHourly = weatherUsecase.getCurrentHourlyWeather(weatherForecast)
+        binding.currentHumidity.text = "${currentHourly.relativehumidity_2m.toString()}%"
+
+        binding.hourlyItems
+        val hourlyAdapter = WeatherHourListItemsAdapter(weatherUsecase.getCurrenDayWeather(weatherForecast))
+        binding.hourlyItems.adapter = hourlyAdapter
     }
 
     private fun showToastWithCoordinates() {
