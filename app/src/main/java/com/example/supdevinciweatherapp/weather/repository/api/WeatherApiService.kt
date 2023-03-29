@@ -12,6 +12,7 @@ public interface WeatherApiService {
         @Query("longitude") longitude: Float,
         //&hourly=temperature_2m,relativehumidity_2m,precipitation_probability,weathercode,windspeed_10m
         @Query("hourly") hourly: String = "temperature_2m,relativehumidity_2m,precipitation_probability,weathercode,windspeed_10m",
-        @Query("current_weather") current_weather: String = "true"
+        @Query("current_weather") current_weather: String = "true",
+        @Query("timezone") timezone: String = "Europe/Paris"
     ): Response<ApiResponse>
 }
