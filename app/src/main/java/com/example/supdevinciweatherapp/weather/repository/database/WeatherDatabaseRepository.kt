@@ -11,4 +11,9 @@ class WeatherDatabaseRepository (private val wordDao: WeatherDatabaseDao) {
     suspend fun insert(city: WeatherCityEntity) {
         wordDao.insert(city)
     }
+
+    @WorkerThread
+    suspend fun deleteAll() {
+        wordDao.deleteAll()
+    }
 }
