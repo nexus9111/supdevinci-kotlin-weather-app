@@ -11,16 +11,16 @@ data class WeatherModels(
 data class CurrentWeather(
     val time: String,
     val temperature: Double,
-    val weathercode: Int,
-    val windspeed: Double,
-    val winddirection: Double,
+    val weatherCode: Int,
+    val windSpeed: Double,
+    val windDirection: Double,
 )
 
 data class HourlyWeather(
     val time: String,
     val timeStamp: Long,
-    val windspeed_10m: Double,
-    val temperature_2m: Double,
-    val relativehumidity_2m: Int,
-    val weathercode: Int
+    val windSpeed: Double,
+    val temperature: Double,
+    val humidity: Int,
+    val weatherCode: Int
 )

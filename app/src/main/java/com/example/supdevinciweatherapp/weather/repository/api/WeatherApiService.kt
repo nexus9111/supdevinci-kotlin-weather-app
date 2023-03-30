@@ -5,14 +5,19 @@ import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-public interface WeatherApiService {
-    @GET("v1/forecast")
+const val GET_WEATHER_FORECAST_ENDPOINT = "v1/forecast"
+
+const val HOURLY_PARAMETERS = "temperature_2m,relativehumidity_2m,precipitation_probability,weathercode,windspeed_10m"
+const val CURRENT_WEATHER = "true"
+const val TIME_ZONE = "Europe/Paris"
+
+interface WeatherApiService {
+    @GET(GET_WEATHER_FORECAST_ENDPOINT)
     suspend fun getWeatherForecast(
         @Query("latitude") latitude: Float,
         @Query("longitude") longitude: Float,
-        //&hourly=temperature_2m,relativehumidity_2m,precipitation_probability,weathercode,windspeed_10m
-        @Query("hourly") hourly: String = "temperature_2m,relativehumidity_2m,precipitation_probability,weathercode,windspeed_10m",
-        @Query("current_weather") current_weather: String = "true",
-        @Query("timezone") timezone: String = "Europe/Paris"
+        @Query("hourly") hourly: String = HOURLY_PARAMETERS,
+        @Query("current_weather") current_weather: String = CURRENT_WEATHER,
+        @Query("timezone") timezone: String = TIME_ZONE
     ): Response<ApiResponse>
 }

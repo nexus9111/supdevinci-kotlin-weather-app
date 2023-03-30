@@ -32,8 +32,6 @@ class MainActivity : AppCompatActivity() {
         coordinateViewModel = CoordinateViewModel()
         coordinateViewModel.updateCoordinate(44.81f, -0.61f)
 
-        // showToastWithCoordinates()
-
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             val weatherForecast = weatherUsecase.getWeatherForecast(coordinateViewModel)
@@ -45,39 +43,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     private fun updateView(weatherForecast: WeatherModels) {
-        binding.currentTime.text = weatherForecast.currentWeather.time
-        binding.currentTemperature.text = "${weatherForecast.currentWeather.temperature}°C"
-        binding.currentWindSpeed.text = "${weatherForecast.currentWeather.windspeed.toString()}km/h"
-        binding.currentWeather.text = WeatherCode().getWeatherDescription(weatherForecast.currentWeather.weathercode)
-        val weatherImageName = WeatherCode().getWeatherImage(weatherForecast.currentWeather.weathercode)
-        // change image with currentWeatherBigIcon id
-        val weatherImage = resources.getIdentifier(weatherImageName, "drawable", packageName)
-        binding.currentWeatherBigIcon.setImageResource(weatherImage)
+        // ----------------------- STRING BULDERS -----------------------
+        val currentTemperatureStr = "${weatherForecast.currentWeather.temperature}°C"
+        val currentWindSpeedStr = "${weatherForecast.currentWeather.windSpeed}km/h"
+
         val currentHourly = weatherUsecase.getCurrentHourlyWeather(weatherForecast)
-        binding.currentHumidity.text = "${currentHourly.relativehumidity_2m.toString()}%"
+        val currentHumidityStr = "${currentHourly.humidity}%"
 
-        binding.hourlyItems
-        val hourlyAdapter = WeatherHourListItemsAdapter(weatherUsecase.getCurrenDayWeather(weatherForecast))
+        val weatherImageName = WeatherCode().getWeatherImage(weatherForecast.currentWeather.weatherCode)
+        val weatherImage = resources.getIdentifier(weatherImageName, "drawable", packageName)
+
+        // ----------------------- UPDATE VIEW -----------------------
+        binding.currentTime.text = weatherForecast.currentWeather.time
+        binding.currentTemperature.text = currentTemperatureStr
+        binding.currentWindSpeed.text = currentWindSpeedStr
+        binding.currentWeather.text = WeatherCode().getWeatherDescription(weatherForecast.currentWeather.weatherCode)
+        binding.currentWeatherBigIcon.setImageResource(weatherImage)
+        binding.currentHumidity.text =  currentHumidityStr
+
+        val hourlyAdapter = WeatherHourListItemsAdapter(weatherUsecase.getCurrentDayWeather(weatherForecast))
         binding.hourlyItems.adapter = hourlyAdapter
-    }
-
-    private fun showToastWithCoordinates() {
-        val text = coordinateViewModel.getCoordinateText()
-        Toast.makeText(this, text, Toast.LENGTH_LONG).show()
-    }
-
-    private fun showToastWithWeatherForecast(weatherForecast: ApiResponse) {
-        val text = "Weather : ${weatherForecast.longitude} is ${weatherForecast.latitude}"
-        Toast.makeText(this, text, Toast.LENGTH_LONG).show()
     }
 
     private fun showToast(text: String) {
         Toast.makeText(this, text, Toast.LENGTH_LONG).show()
     }
 
-    fun initDb() {
+    private fun initDb() {
         val applicationScope = CoroutineScope(SupervisorJob())
         val database = CityRoomDatabase.getDatabase(this, applicationScope)
         val repository = WeatherDatabaseRepository(database.cityDao())

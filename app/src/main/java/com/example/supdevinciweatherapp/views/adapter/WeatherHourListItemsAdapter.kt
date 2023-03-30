@@ -11,6 +11,8 @@ import com.example.supdevinciweatherapp.weather.usecase.WeatherCode
 import java.text.SimpleDateFormat
 import java.util.*
 
+const val RECEIVED_DATE_FORMAT = "yyyy-MM-dd h:mm a"
+const val RECEIVED_DATE_TIME_EXTRACT_FORMAT = "hh:mm a"
 
 class WeatherHourListItemsAdapter(private val arrayList: List<HourlyWeather>) : BaseAdapter() {
     override fun getCount(): Int {
@@ -27,22 +29,30 @@ class WeatherHourListItemsAdapter(private val arrayList: List<HourlyWeather>) : 
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
         val view: View = View.inflate(parent?.context, R.layout.list_item_hourly_weather, null)
+
+
+        val timeParsed = SimpleDateFormat(RECEIVED_DATE_FORMAT).parse(arrayList[position].time)
+        val dateParser = SimpleDateFormat(RECEIVED_DATE_TIME_EXTRACT_FORMAT)
+        val netDate = Date(timeParsed?.time ?: 0)
+        val beautyDate = dateParser.format(netDate)
+
+        val iconName = WeatherCode().getWeatherImage(arrayList[position].weatherCode)
+        val weatherImage = view.context.resources.getIdentifier(iconName + "_icon", "drawable", view.context.packageName)
+
+        // ----------------------- VIEW GETTER -----------------------
         val time = view.findViewById<TextView>(R.id.hourTime)
         val temperature = view.findViewById<TextView>(R.id.hourTemperature)
         val windSpeed = view.findViewById<TextView>(R.id.hourWindSpeed)
         val weatherIcon = view.findViewById<ImageView>(R.id.hourWeatherIcon)
 
-        val timeParsed = SimpleDateFormat("yyyy-MM-dd h:mm a").parse(arrayList[position].time)
-        val dateParser = SimpleDateFormat("hh:mm a")
-        val netDate = Date(timeParsed.time)
-        val beautyDate = dateParser.format(netDate)
-        val iconName = WeatherCode().getWeatherImage(arrayList[position].weathercode)
+        // ----------------------- STRING BUILDER -----------------------
+        val temperatureToString = "${arrayList[position].temperature}°C"
+        val windSpeedToString = "${arrayList[position].windSpeed}km/h"
 
+        // ----------------------- VIEW BUILDER -----------------------
         time.text = beautyDate
-        temperature.text = "${arrayList[position].temperature_2m}°C"
-        windSpeed.text = "${arrayList[position].windspeed_10m}km/h"
-
-        val weatherImage = view.context.resources.getIdentifier(iconName + "_icon", "drawable", view.context.packageName)
+        temperature.text = temperatureToString
+        windSpeed.text = windSpeedToString
         weatherIcon.setImageResource(weatherImage)
 
         return view
