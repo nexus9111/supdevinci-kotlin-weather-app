@@ -4,13 +4,17 @@ import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.EditText
 import android.widget.Spinner
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import com.example.supdevinciweatherapp.R
 import com.example.supdevinciweatherapp.commonModels.City
 import com.example.supdevinciweatherapp.commonModels.WeatherModels
 import com.example.supdevinciweatherapp.commonModels.cities
 import com.example.supdevinciweatherapp.databinding.ActivityMainBinding
+import com.example.supdevinciweatherapp.geocoding.usecase.GeoCodingApiUsecase
 import com.example.supdevinciweatherapp.utils.utils
 import com.example.supdevinciweatherapp.viewModels.CoordinateViewModel
 import com.example.supdevinciweatherapp.views.adapter.WeatherHourListItemsAdapter
@@ -19,6 +23,7 @@ import com.example.supdevinciweatherapp.weather.repository.CityRoomDatabase
 import com.example.supdevinciweatherapp.weather.repository.database.WeatherDatabaseRepository
 import com.example.supdevinciweatherapp.weather.usecase.WeatherCode
 import com.example.supdevinciweatherapp.weather.usecase.api.WeatherApiUsecase
+import io.github.cdimascio.dotenv.dotenv
 import kotlinx.coroutines.*
 
 var citySelected = "Talence"
@@ -28,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var coordinateViewModel: CoordinateViewModel
     private lateinit var dbRepository: WeatherDatabaseRepository
     private var weatherUsecase = WeatherApiUsecase()
+    private var geoCodingApiUsecase = GeoCodingApiUsecase()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
@@ -38,6 +44,12 @@ class MainActivity : AppCompatActivity() {
         dbRepository = initDbAndUpdateSelectedCity()
         coordinateViewModel = getCityCoordinates(citySelected)
 
+
+        val searchCityButton = findViewById<Button>(R.id.search_city_button)
+        searchCityButton.setOnClickListener {
+            searchCustomCity()
+        }
+
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             val weatherForecast = weatherUsecase.getWeatherForecast(coordinateViewModel)
@@ -45,6 +57,37 @@ class MainActivity : AppCompatActivity() {
                 updateView(weatherForecast)
             } else {
                 utils().showToast("Weather forecast is null", this@MainActivity)
+            }
+        }
+    }
+
+    private fun searchCustomCity() {
+        coordinateViewModel = CoordinateViewModel()
+
+        val cityInput = findViewById<EditText>(R.id.city_input)
+        val cityName = cityInput.text.toString()
+        if (cityName.isEmpty()) {
+            return
+        }
+
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            val cityCoordonates = geoCodingApiUsecase.getWeatherForecast(cityName)
+            if (cityCoordonates != null) {
+                coordinateViewModel.updateCoordinate(cityCoordonates.longitude, cityCoordonates.latitude)
+                println("cityCoordonates: $cityCoordonates")
+                if (cityCoordonates.name != citySelected) {
+                    citySelected = cityCoordonates.name
+                    val weatherForecast = weatherUsecase.getWeatherForecast(coordinateViewModel)
+                    if (weatherForecast != null) {
+                        updateView(weatherForecast)
+                    } else {
+                        utils().showToast("Weather forecast is null", this@MainActivity)
+                    }
+                }
+
+            } else {
+                utils().showToast("cityCoordonates is null", this@MainActivity)
             }
         }
     }

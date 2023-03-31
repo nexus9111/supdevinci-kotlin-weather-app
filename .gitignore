@@ -93,6 +93,8 @@ captures/
 *.jks
 *.keystore
 
+app/src/main/.env
+
 # Google Services (e.g. APIs or Firebase)
 # google-services.json
 

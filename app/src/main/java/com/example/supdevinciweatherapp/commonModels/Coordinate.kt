@@ -1,6 +1,6 @@
 package com.example.supdevinciweatherapp.commonModels
 
-data class Coordinate (
+data class Coordinate(
     val longitude: Float,
     val latitude: Float
 )
@@ -40,4 +40,11 @@ val cities = listOf(
     City("Toulouse", 1.4442f, 43.6045f),
     City("Tours", 0.6892f, 47.3941f),
     City("Villeurbanne", 4.8807f, 45.7669f)
+)
+data class CounrtyCoordonates(
+    val name: String,
+    val latitude: Float,
+    val longitude: Float,
+    val country: String,
+    val state: String
 )
