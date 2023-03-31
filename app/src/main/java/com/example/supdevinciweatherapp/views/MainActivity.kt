@@ -47,7 +47,6 @@ class MainActivity : AppCompatActivity() {
                 utils().showToast("Weather forecast is null", this@MainActivity)
             }
         }
-
     }
 
     private fun getCityCoordinates(city: String): CoordinateViewModel {
