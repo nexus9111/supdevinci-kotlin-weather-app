@@ -1,4 +1,4 @@
-package com.example.supdevinciweatherapp.weather.repository
+package com.example.supdevinciweatherapp.weather.repository.database
 
 import android.content.Context
 import androidx.room.Database
@@ -11,7 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Database(entities = [WeatherCityEntity::class], version = 1)
+@Database(entities = [WeatherCityEntity::class], version = 2)
 abstract class CityRoomDatabase : RoomDatabase() {
     abstract fun cityDao(): WeatherDatabaseDao
     companion object {

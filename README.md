@@ -12,3 +12,7 @@
 - Clone the repository
 - Run `cp app/src/main/assets/env.example app/src/main/assets/env`
 - Add your API key to the `app/src/main/assets/env` file
+
+### Note
+
+If app crash, it's may be due to geocoding api down

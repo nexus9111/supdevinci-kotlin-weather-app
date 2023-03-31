@@ -8,13 +8,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class GeoCodingApiUsecase {
-    suspend fun getWeatherForecast(country: String): CounrtyCoordonates? {
+    suspend fun getCityLocation(city: String): CounrtyCoordonates? {
         val geoCodingApiFetcher = GeoCodingApiFetcher()
         var finalCounrtyCoordonates: CounrtyCoordonates? = null
 
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
-            val counrtyCoordonates = geoCodingApiFetcher.fetchCityCoordonate(country)
+            val counrtyCoordonates = geoCodingApiFetcher.fetchCityCoordonate(city)
             if (counrtyCoordonates != null) {
                 finalCounrtyCoordonates = counrtyCoordonates
             }

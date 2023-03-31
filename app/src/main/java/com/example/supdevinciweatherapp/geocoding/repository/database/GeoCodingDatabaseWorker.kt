@@ -11,21 +11,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(entities = [GeoCodingEntity::class], version = 1)
-abstract class CityRoomDatabase : RoomDatabase() {
+abstract class GeoCityRoomDatabase : RoomDatabase() {
     abstract fun cityDao(): GeoCodingDatabaseDao
     companion object {
         @Volatile
-        private var INSTANCE: CityRoomDatabase? = null
+        private var INSTANCE: GeoCityRoomDatabase? = null
         fun getDatabase(
             context: Context,
             scope: CoroutineScope
-        ): CityRoomDatabase {
+        ): GeoCityRoomDatabase {
             // if the INSTANCE is not null, then return it,
             // if it is, then create the database
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
-                    CityRoomDatabase::class.java,
+                    GeoCityRoomDatabase::class.java,
                     "city_database"
                 )
                     // Wipes and rebuilds instead of migrating if no Migration object.
