@@ -1,6 +1,5 @@
 package com.example.supdevinciweatherapp.commonModels
 
-
 data class WeatherModels(
     val latitude: Double,
     val longitude: Double,

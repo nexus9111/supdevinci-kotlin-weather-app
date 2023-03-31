@@ -1,6 +1,5 @@
 package com.example.supdevinciweatherapp.weather.models
 
-
 data class ApiResponse(
     val latitude: Double,
     val longitude: Double,

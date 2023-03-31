@@ -1,6 +1,5 @@
 package com.example.supdevinciweatherapp.weather.usecase.api
 
-
 import com.example.supdevinciweatherapp.commonModels.CurrentWeather
 import com.example.supdevinciweatherapp.commonModels.HourlyWeather
 import com.example.supdevinciweatherapp.commonModels.WeatherModels

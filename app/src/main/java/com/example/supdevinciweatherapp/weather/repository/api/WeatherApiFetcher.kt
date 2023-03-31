@@ -4,7 +4,6 @@ import com.example.supdevinciweatherapp.commonModels.Coordinate
 import com.example.supdevinciweatherapp.weather.models.ApiResponse
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import kotlinx.coroutines.*
 
 const val API_ENDPOINT = "https://api.open-meteo.com/"
 

@@ -1,7 +1,5 @@
 package com.example.supdevinciweatherapp.geocoding.repository.api
 
-
-import com.example.supdevinciweatherapp.weather.models.ApiResponse
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Header
