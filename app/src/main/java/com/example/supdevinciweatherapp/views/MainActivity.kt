@@ -42,29 +42,36 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        cityNameDbRepository = initDbAndUpdateSelectedCity()
-        cityCoordDbRepository = initCoordDb()
-        coordinateViewModel = getCityCoordinates(citySelected)
-
-
+        // search button
         val searchCityButton = findViewById<Button>(R.id.search_city_button)
         searchCityButton.setOnClickListener {
             searchCustomCity()
         }
 
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            val weatherForecast = weatherUsecase.getWeatherForecast(coordinateViewModel)
-            if (weatherForecast != null) {
-                updateView(weatherForecast)
-            } else {
-                utils().showToast("Weather forecast is null", this@MainActivity)
+        val dbScope = CoroutineScope(Job() + Dispatchers.Main)
+        dbScope.launch {
+            val cityNameDbInit = initDbAndUpdateSelectedCity()
+            cityNameDbRepository = cityNameDbInit
+
+            val dbInit = initCityCoordinateDB()
+            cityCoordDbRepository = dbInit
+
+            coordinateViewModel = updateSelectedCoordonate()
+
+            val scope = CoroutineScope(Job() + Dispatchers.Main)
+            scope.launch {
+                val weatherForecast = weatherUsecase.getWeatherForecast(coordinateViewModel)
+                if (weatherForecast != null) {
+                    updateView(weatherForecast)
+                } else {
+                    utils().showToast("Weather forecast is null", this@MainActivity)
+                }
             }
         }
+
     }
 
     private fun searchCustomCity() {
-
         val cityInput = findViewById<EditText>(R.id.city_input)
         val cityName = cityInput.text.toString()
         if (cityName.isEmpty()) {
@@ -73,33 +80,31 @@ class MainActivity : AppCompatActivity() {
 
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
-            val cityCoordonates = geoCodingApiUsecase.getCityLocation(cityName)
-            if (cityCoordonates != null) {
-                println("cityCoordonates: $cityCoordonates")
-                if (cityCoordonates.name != citySelected) {
-                    citySelected = cityCoordonates.name
-                    coordinateViewModel.updateCoordinate(cityCoordonates.longitude, cityCoordonates.latitude)
+            val cityCoordinates = geoCodingApiUsecase.getCityLocation(cityName)
+            if (cityCoordinates != null) {
+                println("cityCoordinates: $cityCoordinates")
+                if (cityCoordinates.name != citySelected) {
+                    citySelected = cityCoordinates.name
+                    coordinateViewModel.updateCoordinate(
+                        cityCoordinates.longitude, cityCoordinates.latitude
+                    )
                     val weatherForecast = weatherUsecase.getWeatherForecast(coordinateViewModel)
                     if (weatherForecast != null) {
-                        println("INSERTING DATA")
-                        updateCityCoord(cityCoordonates)
-                        println("DATA INSERTED")
+                        updateCityCoord(cityCoordinates)
                         updateView(weatherForecast)
                     } else {
                         utils().showToast("Weather forecast is null", this@MainActivity)
                     }
                 }
-
             } else {
                 utils().showToast("cityCoordonates is null", this@MainActivity)
             }
         }
     }
 
-    private fun getCityCoordinates(city: String): CoordinateViewModel {
+    private fun updateSelectedCoordonate(): CoordinateViewModel {
         coordinateViewModel = CoordinateViewModel()
-        val defaultCityIndex = cities.indexOfFirst { it.town == citySelected }
-        val selectedCity = cities[defaultCityIndex]
+        val selectedCity = getCityCoordFromDb()
         coordinateViewModel.updateCoordinate(selectedCity.longitude, selectedCity.latitude)
         return coordinateViewModel
     }
@@ -114,7 +119,7 @@ class MainActivity : AppCompatActivity() {
             if (weatherForecast != null) {
                 if (city.town != citySelected) {
                     citySelected = city.town
-                    updateCity(citySelected)
+                    updateCity()
                     getCityCoordFromDb()
                     updateView(weatherForecast)
                 }
@@ -124,10 +129,129 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // initDbAndUpdateSelectedCity is called when the app starts
+    // it init the city name db to set the selected city
+    private fun initDbAndUpdateSelectedCity(): WeatherDatabaseRepository {
+        val applicationScope = CoroutineScope(SupervisorJob())
+        val database = CityRoomDatabase.getDatabase(this, applicationScope)
+        val repository = WeatherDatabaseRepository(database.cityDao())
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            repository.allCities.collect {
+                if (it.isNotEmpty()) {
+                    citySelected = it[0].city
+                } else {
+                    repository.insert(WeatherCityEntity(citySelected))
+                }
+            }
+        }
+        return repository
+    }
+
+    // initCoordDb is called when the app starts
+    // it inserts the cities in the database if the database is empty
+    private suspend fun initCityCoordinateDB(): GeoCodingDatabaseRepository {
+        val applicationScope = CoroutineScope(SupervisorJob())
+        val database = GeoCityRoomDatabase.getDatabase(this, applicationScope)
+        val repository = GeoCodingDatabaseRepository(database.cityDao())
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            val cityList = repository.allCities.first()
+            if (cityList.isEmpty()) {
+                for (city in cities) {
+                    repository.insert(
+                        GeoCodingEntity(
+                            city.town, city.latitude.toString(), city.longitude.toString()
+                        )
+                    )
+                }
+            }
+        }.join()
+        return repository
+    }
+
+    // updateCity is called when the user selects a city from the spinner
+    // it updates the city name in the database
+    private fun updateCity() {
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            cityNameDbRepository.deleteAll()
+            cityNameDbRepository.insert(WeatherCityEntity(citySelected))
+        }
+    }
+
+    // updateCityCoord is called when the user selects a city from the spinner
+    // it updates the city coordinates in the database
+    // (it inserts a new row if the city is not in the database)
+    private suspend fun updateCityCoord(city: CounrtyCoordonates) {
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch(Dispatchers.IO) {
+            cityCoordDbRepository.insert(
+                GeoCodingEntity(
+                    city.name, city.latitude.toString(), city.longitude.toString()
+                )
+            )
+        }
+        return
+    }
+
+    // getCityCoordFromDb is called when the user selects a city from the spinner
+    // it gets the selected city coordinates from the database and updates the view
+    private fun getCityCoordFromDb(): CounrtyCoordonates {
+        var coordonates = CounrtyCoordonates("", 0f, 0f, "", "")
+        val applicationScope = CoroutineScope(SupervisorJob())
+        val database = GeoCityRoomDatabase.getDatabase(this, applicationScope)
+        val repository = GeoCodingDatabaseRepository(database.cityDao())
+        applicationScope.launch(Dispatchers.IO) {
+            repository.allCities.collect {
+                if (it.isNotEmpty()) {
+                    for (city in it) {
+                        if (city.city == citySelected) {
+                            coordonates = CounrtyCoordonates(
+                                city.city, city.lat.toFloat(), city.lon.toFloat(), "France", "FR"
+                            )
+                            coordinateViewModel.updateCoordinate(
+                                coordonates.longitude, coordonates.latitude
+                            )
+                        }
+                    }
+                } else {
+                    throw Exception("No city found, there is a problem with the database")
+                }
+            }
+        }
+        return coordonates
+    }
+
+    // getAllCitiesFromDb is used to get all the cities from the database
+    // it should never be empty, because it is initialized in the initCoordDb function
+    private suspend fun getAllCitiesFromDb(): List<City> {
+        var cities: MutableList<City> = mutableListOf()
+
+        val applicationScope = CoroutineScope(SupervisorJob())
+        val database = GeoCityRoomDatabase.getDatabase(this, applicationScope)
+        val repository = GeoCodingDatabaseRepository(database.cityDao())
+
+        applicationScope.launch(Dispatchers.IO) {
+            val cityList = repository.allCities.first()
+            if (cityList.isNotEmpty()) {
+                for (city in cityList) {
+                    cities.add(City(city.city, city.lat.toFloat(), city.lon.toFloat()))
+                }
+            } else {
+                throw Exception("No city found, there is a problem with the database")
+            }
+        }.join()
+
+        cities.sortBy { it.town }
+        return cities
+    }
+
     private suspend fun updateView(weatherForecast: WeatherModels) {
         val citySpinner = findViewById<Spinner>(binding.citySpinner.id)
         val allCities = getAllCitiesFromDb()
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allCities.map { it.town })
+        val adapter =
+            ArrayAdapter(this, android.R.layout.simple_spinner_item, allCities.map { it.town })
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         citySpinner.adapter = adapter
 
@@ -136,10 +260,7 @@ class MainActivity : AppCompatActivity() {
 
         citySpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
-                parent: AdapterView<*>,
-                view: View?,
-                position: Int,
-                id: Long
+                parent: AdapterView<*>, view: View?, position: Int, id: Long
             ) {
                 val selectedCity = allCities[position]
                 onCitySelected(selectedCity)
@@ -172,121 +293,5 @@ class MainActivity : AppCompatActivity() {
         val hourlyAdapter =
             WeatherHourListItemsAdapter(weatherUsecase.getCurrentDayWeather(weatherForecast))
         binding.hourlyItems.adapter = hourlyAdapter
-    }
-
-    private fun initDbAndUpdateSelectedCity(): WeatherDatabaseRepository {
-        val applicationScope = CoroutineScope(SupervisorJob())
-        val database = CityRoomDatabase.getDatabase(this, applicationScope)
-        val repository = WeatherDatabaseRepository(database.cityDao())
-        applicationScope.launch(Dispatchers.IO) {
-            repository.allCities.collect {
-                if (it.isNotEmpty()) {
-                    citySelected = it[0].city
-                } else {
-                    repository.insert(WeatherCityEntity(citySelected))
-                }
-            }
-        }
-        return repository
-    }
-
-    private fun initCoordDb(): GeoCodingDatabaseRepository {
-        val applicationScope = CoroutineScope(SupervisorJob())
-        val database = GeoCityRoomDatabase.getDatabase(this, applicationScope)
-        val repository = GeoCodingDatabaseRepository(database.cityDao())
-        applicationScope.launch(Dispatchers.IO) {
-            repository.allCities.collect {
-                if (it.isEmpty()) {
-                    for (city in cities) {
-                        repository.insert(
-                            GeoCodingEntity(
-                                city.town,
-                                city.latitude.toString(),
-                                city.longitude.toString()
-                            )
-                        )
-                    }
-                }
-            }
-        }
-        return repository
-    }
-
-    private fun updateCity(city: String) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            cityNameDbRepository.deleteAll()
-            cityNameDbRepository.insert(WeatherCityEntity(city))
-        }
-    }
-
-    private suspend fun updateCityCoord(city: CounrtyCoordonates) {
-        val applicationScope = CoroutineScope(SupervisorJob())
-        val database = GeoCityRoomDatabase.getDatabase(this, applicationScope)
-        val repository = GeoCodingDatabaseRepository(database.cityDao())
-
-        applicationScope.launch(Dispatchers.IO) {
-            repository.insert(
-                GeoCodingEntity(
-                    city.name,
-                    city.latitude.toString(),
-                    city.longitude.toString()
-                )
-            )
-        }
-        return
-    }
-
-    private fun getCityCoordFromDb(): CounrtyCoordonates {
-        var coordonates: CounrtyCoordonates = CounrtyCoordonates("", 0f, 0f, "", "")
-        val applicationScope = CoroutineScope(SupervisorJob())
-        val database = GeoCityRoomDatabase.getDatabase(this, applicationScope)
-        val repository = GeoCodingDatabaseRepository(database.cityDao())
-        applicationScope.launch(Dispatchers.IO) {
-            repository.allCities.collect {
-                if (it.isNotEmpty()) {
-                    for (city in it) {
-                        if (city.city == citySelected) {
-                            coordonates = CounrtyCoordonates(
-                                city.city,
-                                city.lat.toFloat(),
-                                city.lon.toFloat(),
-                                "France",
-                                "FR"
-                            )
-                            coordinateViewModel.updateCoordinate(
-                                coordonates.longitude,
-                                coordonates.latitude
-                            )
-                        }
-                    }
-                } else {
-                    throw Exception("No city found, there is a problem with the database")
-                }
-            }
-        }
-        return coordonates
-    }
-
-    private suspend fun getAllCitiesFromDb(): List<City> {
-        var cities: MutableList<City> = mutableListOf()
-
-        val applicationScope = CoroutineScope(SupervisorJob())
-        val database = GeoCityRoomDatabase.getDatabase(this, applicationScope)
-        val repository = GeoCodingDatabaseRepository(database.cityDao())
-
-        applicationScope.launch(Dispatchers.IO) {
-            val cityList = repository.allCities.first()
-            if (cityList.isNotEmpty()) {
-                for (city in cityList) {
-                    cities.add(City(city.city, city.lat.toFloat(), city.lon.toFloat()))
-                }
-            } else {
-                throw Exception("No city found, there is a problem with the database")
-            }
-        }.join()
-
-        cities.sortBy { it.town }
-        return cities
     }
 }

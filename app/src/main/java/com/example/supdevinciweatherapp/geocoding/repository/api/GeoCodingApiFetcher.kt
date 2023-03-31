@@ -31,7 +31,6 @@ class GeoCodingApiFetcher {
         val apiKey = dotenv["GEO_NINJA_API"]
         val response = geoCodingApiService.getCountryCoordonates(country, apiKey!!)
         return if (response.isSuccessful) {
-            println("======================")
             response.body()!![0]
         } else {
             null
