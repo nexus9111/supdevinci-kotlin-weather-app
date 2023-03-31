@@ -31,14 +31,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-        dbRepository = initDb()
-
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        coordinateViewModel = CoordinateViewModel()
-        coordinateViewModel.updateCoordinate(-0.61f, 44.81f)
+        dbRepository = initDbAndUpdateSelectedCity()
+        coordinateViewModel = getCityCoordinates(citySelected)
 
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
@@ -49,11 +47,21 @@ class MainActivity : AppCompatActivity() {
                 utils().showToast("Weather forecast is null", this@MainActivity)
             }
         }
+
+    }
+
+    private fun getCityCoordinates(city: String): CoordinateViewModel {
+        coordinateViewModel = CoordinateViewModel()
+        val defaultCityIndex = cities.indexOfFirst { it.town == citySelected }
+        val selectedCity = cities[defaultCityIndex]
+        coordinateViewModel.updateCoordinate(selectedCity.longitude, selectedCity.latitude)
+        return coordinateViewModel
     }
 
     private fun onCitySelected(city: City) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
         coordinateViewModel = CoordinateViewModel()
+
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             coordinateViewModel.updateCoordinate(city.longitude, city.latitude)
             val weatherForecast = weatherUsecase.getWeatherForecast(coordinateViewModel)
@@ -70,7 +78,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateView(weatherForecast: WeatherModels) {
-
         val citySpinner = findViewById<Spinner>(binding.citySpinner.id)
         val adapter =
             ArrayAdapter(this, android.R.layout.simple_spinner_item, cities.map { it.town })
@@ -120,7 +127,7 @@ class MainActivity : AppCompatActivity() {
         binding.hourlyItems.adapter = hourlyAdapter
     }
 
-    private fun initDb(): WeatherDatabaseRepository {
+    private fun initDbAndUpdateSelectedCity(): WeatherDatabaseRepository {
         val applicationScope = CoroutineScope(SupervisorJob())
         val database = CityRoomDatabase.getDatabase(this, applicationScope)
         val repository = WeatherDatabaseRepository(database.cityDao())
