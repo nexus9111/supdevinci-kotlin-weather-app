@@ -122,7 +122,7 @@ class MainActivity : AppCompatActivity() {
                 if (cityCoordinates.name != citySelected) {
                     citySelected = cityCoordinates.name
                     coordinateViewModel.updateCoordinate(
-                        cityCoordinates.longitude, cityCoordinates.latitude
+                        cityCoordinates.latitude, cityCoordinates.longitude
                     )
                     val weatherForecast = weatherUsecase.getWeatherForecast(coordinateViewModel)
                     if (weatherForecast != null) {
