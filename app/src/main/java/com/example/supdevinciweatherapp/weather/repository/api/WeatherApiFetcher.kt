@@ -22,8 +22,10 @@ class WeatherApiFetcher {
     suspend fun fetchWeatherForecast(coordinate: Coordinate): ApiResponse? {
         val lat = coordinate.latitude
         val lon = coordinate.longitude
-        val response = weatherApiService.getWeatherForecast(lat, lon)
+        println(coordinate)
+        val response = weatherApiService.getWeatherForecast(coordinate.longitude, coordinate.latitude)
         return if (response.isSuccessful) {
+            println(response)
             response.body()
         } else {
             null

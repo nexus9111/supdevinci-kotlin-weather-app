@@ -7,7 +7,7 @@ data class Coordinate(
 
 data class City(val town: String, val longitude: Float, val latitude: Float)
 
-val cities = listOf(
+var cities = mutableListOf(
     City("Aix-en-Provence", 5.4474f, 43.5299f),
     City("Amiens", 2.2975f, 49.8942f),
     City("Angers", -0.5542f, 47.4784f),

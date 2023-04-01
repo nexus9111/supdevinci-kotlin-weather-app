@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
         val applicationScope = CoroutineScope(SupervisorJob())
         val database = CityRoomDatabase.getDatabase(this, applicationScope)
         val repository = WeatherDatabaseRepository(database.cityDao())
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             repository.allCities.collect {
                 if (it.isNotEmpty()) {
@@ -154,10 +154,12 @@ class MainActivity : AppCompatActivity() {
         val applicationScope = CoroutineScope(SupervisorJob())
         val database = GeoCityRoomDatabase.getDatabase(this, applicationScope)
         val repository = GeoCodingDatabaseRepository(database.cityDao())
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             val cityList = repository.allCities.first()
             if (cityList.isEmpty()) {
+
+                println("wtf cityList: $cityList")
                 for (city in cities) {
                     repository.insert(
                         GeoCodingEntity(
@@ -165,6 +167,8 @@ class MainActivity : AppCompatActivity() {
                         )
                     )
                 }
+            } else {
+                println("cityList: $cityList")
             }
         }.join()
         return repository
@@ -173,7 +177,7 @@ class MainActivity : AppCompatActivity() {
     // updateCity is called when the user selects a city from the spinner
     // it updates the city name in the database
     private fun updateCity() {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             cityNameDbRepository.deleteAll()
             cityNameDbRepository.insert(WeatherCityEntity(citySelected))
@@ -184,14 +188,29 @@ class MainActivity : AppCompatActivity() {
     // it updates the city coordinates in the database
     // (it inserts a new row if the city is not in the database)
     private suspend fun updateCityCoord(city: CounrtyCoordonates) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch(Dispatchers.IO) {
-            cityCoordDbRepository.insert(
-                GeoCodingEntity(
-                    city.name, city.latitude.toString(), city.longitude.toString()
-                )
-            )
-        }
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
+        scope.launch {
+            var allCities = getAllCitiesFromDb()
+            var cityFound = false
+            for (cityDb in allCities) {
+                if (cityDb.town == city.name) {
+                    cityFound = true
+                    break
+                }
+            }
+            if (!cityFound) {
+                var mutableAllCities = allCities.toMutableList()
+                mutableAllCities.add(City(city.name, city.latitude, city.longitude))
+                cityCoordDbRepository.deleteAll()
+                for (city in mutableAllCities) {
+                    cityCoordDbRepository.insert(
+                        GeoCodingEntity(
+                            city.town, city.latitude.toString(), city.longitude.toString()
+                        )
+                    )
+                }
+            }
+        }.join()
         return
     }
 
@@ -202,7 +221,7 @@ class MainActivity : AppCompatActivity() {
         val applicationScope = CoroutineScope(SupervisorJob())
         val database = GeoCityRoomDatabase.getDatabase(this, applicationScope)
         val repository = GeoCodingDatabaseRepository(database.cityDao())
-        applicationScope.launch(Dispatchers.IO) {
+        applicationScope.launch(Dispatchers.Main) {
             repository.allCities.collect {
                 if (it.isNotEmpty()) {
                     for (city in it) {
