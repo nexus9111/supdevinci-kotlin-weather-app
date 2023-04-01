@@ -35,6 +35,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cityCoordDbRepository: GeoCodingDatabaseRepository
     private var weatherUsecase = WeatherApiUsecase()
     private var geoCodingApiUsecase = GeoCodingApiUsecase()
+    private lateinit var citySpinner: Spinner
+    private lateinit var allCities: List<City>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
@@ -42,12 +44,21 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // search button
+        citySpinner = findViewById<Spinner>(binding.citySpinner.id)
+
+        setupSearchButton()
+
+        initializeData()
+    }
+
+    private fun setupSearchButton() {
         val searchCityButton = findViewById<Button>(R.id.search_city_button)
         searchCityButton.setOnClickListener {
             searchCustomCity()
         }
+    }
 
+    private fun initializeData() {
         val dbScope = CoroutineScope(Job() + Dispatchers.Main)
         dbScope.launch {
             val cityNameDbInit = initDbAndUpdateSelectedCity()
@@ -67,8 +78,33 @@ class MainActivity : AppCompatActivity() {
                     utils().showToast("Weather forecast is null", this@MainActivity)
                 }
             }
-        }
 
+            allCities = getAllCitiesFromDb()
+            setupCitySpinner()
+        }
+    }
+
+    private fun setupCitySpinner() {
+        val adapter =
+            ArrayAdapter(this, android.R.layout.simple_spinner_item, allCities.map { it.town })
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        citySpinner.adapter = adapter
+
+        val defaultCityIndex = allCities.indexOfFirst { it.town == citySelected }
+        citySpinner.setSelection(defaultCityIndex)
+
+        citySpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>, view: View?, position: Int, id: Long
+            ) {
+                val selectedCity = allCities[position]
+                if (selectedCity.town != citySelected) {
+                    onCitySelected(selectedCity)
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
     }
 
     private fun searchCustomCity() {
@@ -102,14 +138,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateSelectedCoordonate(): CoordinateViewModel {
+    private suspend fun updateSelectedCoordonate(): CoordinateViewModel {
         coordinateViewModel = CoordinateViewModel()
         val selectedCity = getCityCoordFromDb()
-        coordinateViewModel.updateCoordinate(selectedCity.longitude, selectedCity.latitude)
+        coordinateViewModel.updateCoordinate(selectedCity.latitude, selectedCity.longitude)
         return coordinateViewModel
     }
 
     private fun onCitySelected(city: City) {
+        println("CALLED")
         coordinateViewModel = CoordinateViewModel()
 
         val scope = CoroutineScope(Job() + Dispatchers.Main)
@@ -117,12 +154,10 @@ class MainActivity : AppCompatActivity() {
             coordinateViewModel.updateCoordinate(city.longitude, city.latitude)
             val weatherForecast = weatherUsecase.getWeatherForecast(coordinateViewModel)
             if (weatherForecast != null) {
-                if (city.town != citySelected) {
-                    citySelected = city.town
-                    updateCity()
-                    getCityCoordFromDb()
-                    updateView(weatherForecast)
-                }
+                citySelected = city.town
+                updateCity()
+                getCityCoordFromDb()
+                updateView(weatherForecast)
             } else {
                 utils().showToast("Weather forecast is null", this@MainActivity)
             }
@@ -158,8 +193,6 @@ class MainActivity : AppCompatActivity() {
         scope.launch {
             val cityList = repository.allCities.first()
             if (cityList.isEmpty()) {
-
-                println("wtf cityList: $cityList")
                 for (city in cities) {
                     repository.insert(
                         GeoCodingEntity(
@@ -167,8 +200,6 @@ class MainActivity : AppCompatActivity() {
                         )
                     )
                 }
-            } else {
-                println("cityList: $cityList")
             }
         }.join()
         return repository
@@ -216,29 +247,28 @@ class MainActivity : AppCompatActivity() {
 
     // getCityCoordFromDb is called when the user selects a city from the spinner
     // it gets the selected city coordinates from the database and updates the view
-    private fun getCityCoordFromDb(): CounrtyCoordonates {
+    private suspend fun getCityCoordFromDb(): CounrtyCoordonates {
         var coordonates = CounrtyCoordonates("", 0f, 0f, "", "")
         val applicationScope = CoroutineScope(SupervisorJob())
         val database = GeoCityRoomDatabase.getDatabase(this, applicationScope)
         val repository = GeoCodingDatabaseRepository(database.cityDao())
-        applicationScope.launch(Dispatchers.Main) {
-            repository.allCities.collect {
-                if (it.isNotEmpty()) {
-                    for (city in it) {
-                        if (city.city == citySelected) {
-                            coordonates = CounrtyCoordonates(
-                                city.city, city.lat.toFloat(), city.lon.toFloat(), "France", "FR"
-                            )
-                            coordinateViewModel.updateCoordinate(
-                                coordonates.longitude, coordonates.latitude
-                            )
-                        }
+        applicationScope.launch(Dispatchers.IO) {
+            val allCities = repository.allCities.first()
+            if (allCities.isNotEmpty()) {
+                for (city in allCities) {
+                    if (city.city == citySelected) {
+                        coordonates = CounrtyCoordonates(
+                            city.city, city.lat.toFloat(), city.lon.toFloat(), "France", "FR"
+                        )
+                        coordinateViewModel.updateCoordinate(
+                            coordonates.longitude, coordonates.latitude
+                        )
                     }
-                } else {
-                    throw Exception("No city found, there is a problem with the database")
                 }
+            } else {
+                throw Exception("No city found, there is a problem with the database")
             }
-        }
+        }.join()
         return coordonates
     }
 
@@ -267,27 +297,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun updateView(weatherForecast: WeatherModels) {
-        val citySpinner = findViewById<Spinner>(binding.citySpinner.id)
-        val allCities = getAllCitiesFromDb()
-        val adapter =
-            ArrayAdapter(this, android.R.layout.simple_spinner_item, allCities.map { it.town })
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        citySpinner.adapter = adapter
-
-        val defaultCityIndex = allCities.indexOfFirst { it.town == citySelected }
-        citySpinner.setSelection(defaultCityIndex)
-
-        citySpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>, view: View?, position: Int, id: Long
-            ) {
-                val selectedCity = allCities[position]
-                onCitySelected(selectedCity)
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>) {}
-        }
-
+        citySpinner = findViewById<Spinner>(binding.citySpinner.id)
         // ----------------------- STRING BULDERS -----------------------
         val currentTemperatureStr = "${weatherForecast.currentWeather.temperature}°C"
         val currentWindSpeedStr = "${weatherForecast.currentWeather.windSpeed}km/h"
