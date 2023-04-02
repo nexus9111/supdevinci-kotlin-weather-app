@@ -26,6 +26,11 @@ import com.example.supdevinciweatherapp.weather.usecase.api.WeatherApiUsecase
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
+// Note pour Maxime:
+// L'ensemble des fonctionnalités de l'application sont implémentées.
+// Il n'y a que la BDD qui fonctionne mal.
+// Les données ne sont jamais récupérées au début de l'app.
+
 var citySelected = "Talence"
 
 class MainActivity : AppCompatActivity() {
